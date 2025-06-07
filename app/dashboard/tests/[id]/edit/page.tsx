@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
 
 // API base URL
-const API_BASE_URL = "http://13.203.232.106:5000/api"
+const API_BASE_URL = "http://13.235.79.13:5000/api"
 
 interface Category {
   _id: string
@@ -69,10 +69,11 @@ export default function EditTestSeriesPage({ params }: { params: { id: string } 
         if (!response.ok) {
           throw new Error("Failed to fetch test series")
         }
-        const data = await response.json()
+        const res = await response.json()
+        const data = res?.testSeries
         console.log(data)
         setFormData({
-          title: data.title || "",
+          title: data?.title || "",
           description: data.description || "",
           Category: data.Category[0]?._id || "",
           totalTests: data.totalTests || 0,
@@ -80,8 +81,8 @@ export default function EditTestSeriesPage({ params }: { params: { id: string } 
         })
        
 
-        setSelectedLanguages(data.languages || [])
-        setImagePreview(data.image || null)
+        setSelectedLanguages(data?.languages || [])
+        setImagePreview(data?.image || null)
       } catch (error) {
         console.error("Error fetching test series:", error)
         toast({

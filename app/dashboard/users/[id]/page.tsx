@@ -29,7 +29,7 @@ import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 // API base URL
-const API_BASE_URL = "http://13.203.232.106:5000/api"
+const API_BASE_URL = "http://13.235.79.13:5000/api"
 
 interface TestAnalytics {
   testId: {

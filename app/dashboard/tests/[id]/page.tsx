@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 
 // API base URL
-const API_BASE_URL = "http://13.203.232.106:5000/api"
+const API_BASE_URL = "http://13.235.79.13:5000/api"
 
 interface Test {
   _id: string
@@ -87,14 +87,19 @@ export default function TestSeriesDetailsPage({ params }: { params: { id: string
 
   useEffect(() => {
     const fetchTestSeries = async () => {
+      const token = localStorage.getItem('authToken')
       setLoading(true)
       try {
-        const response = await fetch(`${API_BASE_URL}/testseries/${id}`)
+        const response = await fetch(`${API_BASE_URL}/testseries/${id}`,{
+              headers: {
+      Authorization: `Bearer ${token}`,
+    },
+        })
         if (!response.ok) {
           throw new Error("Failed to fetch test series")
         }
         const data = await response.json()
-        setTestSeries(data)
+        setTestSeries(data.testSeries)
       } catch (error) {
         console.error("Error fetching test series:", error)
         toast({
@@ -109,10 +114,11 @@ export default function TestSeriesDetailsPage({ params }: { params: { id: string
     const fetchTests = async () => {
       setLoading(true)
       try {
+        const token = localStorage.getItem('authToken')
         const response = await fetch(`${API_BASE_URL}/tests/series/${id}`,{
           method: "GET",
           headers: {
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MDY0MzhjOTJjM2M5YmM0ZjFhMzk0ZCIsImlhdCI6MTc0NTMyNjg1NywiZXhwIjoxNzQ3OTE4ODU3fQ.DLevhObL2xiMSEOcot5sbW2oKpXoFgW-UBdpQp44Ii4`
+            Authorization: `Bearer ${token}`
           },
         })
 
@@ -121,7 +127,7 @@ export default function TestSeriesDetailsPage({ params }: { params: { id: string
         }
         const data = await response.json()
         setTests(data.tests)
-        console.log(data.tests)
+        console.log(data)
       } catch (error) {
         console.error("Error fetching test series:", error)
         toast({

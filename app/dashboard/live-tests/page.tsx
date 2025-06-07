@@ -1,9 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, ChevronDown, Download, Plus, Search, Filter, FileText, Users, Globe } from "lucide-react"
+import Link from "next/link"
+import {
+  MoreHorizontal,
+  ChevronDown,
+  Download,
+  Plus,
+  Search,
+  Filter,
+  FileText,
+  Users,
+  Calendar,
+  Clock,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,127 +45,113 @@ import { Skeleton } from "@/components/ui/skeleton"
 // API base URL
 const API_BASE_URL = "http://13.235.79.13:5000/api"
 
-interface Category {
-  _id: string
-  title: string
-}
-
-interface TestSeries {
+interface LiveTest {
   _id: string
   title: string
   description: string
-  image: string
+  duration: number
   createdBy: {
     _id: string
     name?: string
   }
-  Category: Category
-  tests: Array<{ _id: string }>
-  enrolledUsers: Array<{ _id: string }>
-  totalTests: number
-  freeTests: number
+  isFree: boolean
+  totalMarks: number
+  passingMarks: number
   languages: string[]
+  questions: string[]
+  attempts: number
+  tags: string[]
+  published: boolean
+  publishedAt?: string
+  availableFrom: string
+  availableTo?: string
+  attemptedBy: Array<{
+    user: string
+    startedAt: string
+  }>
   createdAt: string
 }
 
-export default function CategoryPage() {
+export default function LiveTestsPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const token = localStorage.getItem('authToken')
+  const token = localStorage.getItem('authToken');
+
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [testToDelete, setTestToDelete] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [testSeries, setTestSeries] = useState<TestSeries[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [liveTests, setLiveTests] = useState<LiveTest[]>([])
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
-  // Fetch test series data
+  // Fetch live tests data
   useEffect(() => {
-    const fetchTestSeries = async () => {
+    const fetchLiveTests = async () => {
       setLoading(true)
       try {
-        const response = await fetch(`${API_BASE_URL}/testseries?page=${page}&limit=10`)
+        const response = await fetch(`${API_BASE_URL}/live/live-tests?page=${page}&limit=10`,{
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+        })
         if (!response.ok) {
-          throw new Error("Failed to fetch test series")
+          throw new Error("Failed to fetch live tests")
         }
         const data = await response.json()
-        console.log(data)
-        setTestSeries(data.testSeries || [])
+        console.log(data.tests)
+        setLiveTests(data.tests || [])
         setTotalPages(data.totalPages || 1)
       } catch (error) {
-        console.error("Error fetching test series:", error)
+        console.error("Error fetching live tests:", error)
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to load test series data. Please try again.",
+          description: "Failed to load live tests data. Please try again.",
         })
       } finally {
         setLoading(false)
       }
     }
 
-    fetchTestSeries()
+    fetchLiveTests()
   }, [page, toast])
 
-  // Fetch categories for filtering
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        // Assuming there's an endpoint for categories
-        const response = await fetch(`${API_BASE_URL}/categories`)
-        if (response.ok) {
-          const data = await response.json()
-          console.log(data)
-          setCategories(data || [])
-        }
-      } catch (error) {
-        console.error("Error fetching categories:", error)
-      }
-    }
-
-    fetchCategories()
-  }, [])
-
-  // Filter tests based on search term and category
-  const filteredTests = testSeries.filter((test) => {
+  // Filter tests based on search term and tag
+  const filteredTests = liveTests.filter((test) => {
     const matchesSearch =
       test.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (test.description && test.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesCategory = selectedCategory ? test.Category === selectedCategory : true
-    return matchesSearch && matchesCategory
+    const matchesTag = selectedTag ? test.tags.includes(selectedTag) : true
+    return matchesSearch && matchesTag
   })
 
   const handleDelete = async (id: string) => {
     setIsDeleting(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/testseries/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/livetests/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`
-      },
       })
 
       if (!response.ok) {
-        throw new Error("Failed to delete test series")
+        throw new Error("Failed to delete live test")
       }
 
       toast({
-        title: "Test Series deleted",
-        description: "Test series has been deleted successfully",
+        title: "Live Test deleted",
+        description: "Live test has been deleted successfully",
       })
 
-      // Remove the deleted test series from the state
-      setTestSeries(testSeries.filter((test) => test._id !== id))
+      // Remove the deleted test from the state
+      setLiveTests(liveTests.filter((test) => test._id !== id))
       setTestToDelete(null)
     } catch (error) {
-      console.error("Error deleting test series:", error)
+      console.error("Error deleting live test:", error)
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete test series",
+        description: "Failed to delete live test",
       })
     } finally {
       setIsDeleting(false)
@@ -173,27 +170,30 @@ export default function CategoryPage() {
     }
   }
 
+  // Get all unique tags from live tests
+  const allTags = Array.from(new Set(liveTests.flatMap((test) => test.tags || [])))
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Test Series</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Live Tests</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
           <Button asChild>
-            <Link href="/dashboard/tests/create">
+            <Link href="/dashboard/live-tests/create">
               <Plus className="mr-2 h-4 w-4" />
-              Create Test Series
+              Create Live Test
             </Link>
           </Button>
         </div>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Test Series Management</CardTitle>
-          <CardDescription>Manage your test series, view statistics, and track user engagement.</CardDescription>
+          <CardTitle>Live Test Management</CardTitle>
+          <CardDescription>Manage your live tests, view statistics, and track user engagement.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
@@ -216,15 +216,15 @@ export default function CategoryPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline">
-                      Category
+                      Tags
                       <ChevronDown className="ml-2 h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setSelectedCategory(null)}>All</DropdownMenuItem>
-                    {categories.map((category) => (
-                      <DropdownMenuItem key={category._id} onClick={() => setSelectedCategory(category._id)}>
-                        {category.title}
+                    <DropdownMenuItem onClick={() => setSelectedTag(null)}>All</DropdownMenuItem>
+                    {allTags.map((tag) => (
+                      <DropdownMenuItem key={tag} onClick={() => setSelectedTag(tag)}>
+                        {tag}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -250,12 +250,12 @@ export default function CategoryPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Title</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Tests</TableHead>
-                      <TableHead>Free Tests</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Questions</TableHead>
                       <TableHead>Languages</TableHead>
-                      <TableHead>Enrolled Users</TableHead>
-                      <TableHead>Created Date</TableHead>
+                      <TableHead>Attempts</TableHead>
+                      <TableHead>Availability</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -265,37 +265,52 @@ export default function CategoryPage() {
                         <TableRow key={test._id}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-md bg-muted">
-                                <img
-                                  src={test.image || "/placeholder.svg"}
-                                  alt={test.title}
-                                  className="h-full w-full rounded-md object-cover"
-                                />
-                              </div>
+                              <FileText className="h-5 w-5 text-primary" />
                               <span className="line-clamp-1">{test.title}</span>
                             </div>
                           </TableCell>
+                          <TableCell className="flex items-center gap-1">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            {test.duration} mins
+                          </TableCell>
                           <TableCell>
-                            <Badge variant="outline"> {categories.find((cat) => cat._id == test.Category)?.title || "Unknown"}</Badge>
+                            {test.published ? (
+                              <Badge variant="outline" className="border-green-500 text-green-500">
+                                Published
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-amber-500 text-amber-500">
+                                Draft
+                              </Badge>
+                            )}
+                            {test.isFree && (
+                              <Badge className="ml-2" variant="secondary">
+                                Free
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell className="flex items-center gap-1">
                             <FileText className="h-4 w-4 text-muted-foreground" />
-                            {test.totalTests}
+                            {test.questions.length || 0}
                           </TableCell>
-                          <TableCell>{test.freeTests}</TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Globe className="h-4 w-4 text-muted-foreground" />
-                              {test.languages.length > 1
-                                ? `${test.languages[0]} +${test.languages.length - 1}`
-                                : test.languages[0] || "None"}
-                            </div>
+                            {test.languages.length > 1
+                              ? `${test.languages[0]} +${test.languages.length - 1}`
+                              : test.languages[0] || "None"}
                           </TableCell>
                           <TableCell className="flex items-center gap-1">
                             <Users className="h-4 w-4 text-muted-foreground" />
-                            {test.enrolledUsers?.length || 0}
+                            {test.attempts || 0}
                           </TableCell>
-                          <TableCell>{new Date(test.createdAt).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-xs">
+                                {new Date(test.availableFrom).toLocaleDateString()}
+                                {test.availableTo ? ` - ${new Date(test.availableTo).toLocaleDateString()}` : ""}
+                              </span>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -306,18 +321,18 @@ export default function CategoryPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => router.push(`/dashboard/tests/${test._id}`)}>
+                                <DropdownMenuItem onClick={() => router.push(`/dashboard/live-tests/${test._id}`)}>
                                   View details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => router.push(`/dashboard/tests/${test._id}/edit`)}>
-                                  Edit test series
+                                <DropdownMenuItem onClick={() => router.push(`/dashboard/live-tests/${test._id}/edit`)}>
+                                  Edit live test
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-destructive"
                                   onClick={() => setTestToDelete(test._id)}
                                 >
-                                  Delete test series
+                                  Delete live test
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -327,7 +342,7 @@ export default function CategoryPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={8} className="h-24 text-center">
-                          No test series found.
+                          No live tests found.
                         </TableCell>
                       </TableRow>
                     )}
@@ -357,7 +372,7 @@ export default function CategoryPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the test series and remove all associated data.
+              This action cannot be undone. This will permanently delete the live test and remove all associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

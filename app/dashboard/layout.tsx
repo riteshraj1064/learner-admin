@@ -157,6 +157,14 @@ function DesktopSidebar({ pathname }: { pathname: string }) {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname === "/dashboard/live-tests"}>
+              <Link href="/dashboard/live-tests">
+                <FileText className="h-5 w-5" />
+                <span>Live Test Series</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === "/dashboard/category"}>
               <Link href="/dashboard/category">
                 <Settings className="h-5 w-5" />

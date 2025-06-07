@@ -10,7 +10,7 @@ import { useEffect, useState } from "react"
 
 
 
-const API_BASE_URL = "http://13.203.232.106:5000/api"
+const API_BASE_URL = "http://13.235.79.13:5000/api"
 
 export default function DashboardPage() {
 

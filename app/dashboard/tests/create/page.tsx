@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
 
 // API base URL
-const API_BASE_URL = "http://13.203.232.106:5000/api"
+const API_BASE_URL = "http://13.235.79.13:5000/api"
 
 interface Category {
   _id: string
@@ -55,6 +55,8 @@ export default function CreateTestSeriesPage() {
     Category: "",
     totalTests: 0,
     freeTests: 0,
+    Price:0,
+    DiscountPrice:0
   })
 
   // Fetch categories
@@ -87,7 +89,7 @@ export default function CreateTestSeriesPage() {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "totalTests" || name === "freeTests" ? Number.parseInt(value) || 0 : value,
+      [name]: name === "totalTests" || name === "freeTests" || name === "Price" ? Number.parseInt(value) || 0 : value,
     }))
   }
 
@@ -146,11 +148,14 @@ export default function CreateTestSeriesPage() {
       formDataToSend.append("title", formData.title)
       formDataToSend.append("description", formData.description)
       formDataToSend.append("Category", formData.Category)
+      formDataToSend.append("Price", formData.Price.toString())
+      formDataToSend.append("DiscountPrice", formData.DiscountPrice.toString())
       formDataToSend.append("totalTests", formData.totalTests.toString())
       formDataToSend.append("freeTests", formData.freeTests.toString())
       formDataToSend.append("languages", JSON.stringify(selectedLanguages))
       formDataToSend.append("image", imageFile)
-console.log(formDataToSend)
+
+
       const response = await fetch(`${API_BASE_URL}/testseries`, {
         method: "POST",
         body: formDataToSend,
@@ -158,7 +163,7 @@ console.log(formDataToSend)
           Authorization: `Bearer ${token}`
         },
       })
-
+console.log(response)
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.message || "Failed to create test series")
@@ -212,6 +217,32 @@ console.log(formDataToSend)
                   placeholder="Enter test series title"
                   required
                   value={formData.title}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="Price">
+                  Price <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="Price"
+                  name="Price"
+                  placeholder="Enter test series title"
+                  required
+                  value={formData.Price}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="DiscountPrice">
+                  DiscountPrice <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="DiscountPrice"
+                  name="DiscountPrice"
+                  placeholder="Enter test series title"
+                  required
+                  value={formData.DiscountPrice}
                   onChange={handleChange}
                 />
               </div>

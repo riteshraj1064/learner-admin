@@ -2,29 +2,24 @@
 
 import type React from "react"
 
-import { useState, useEffect, use } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { ArrowLeft, Tag } from "lucide-react"
 import Link from "next/link"
-import { ArrowLeft, Calendar, Clock, Tag } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
 
 // API base URL
 const API_BASE_URL = "http://13.235.79.13:5000/api"
-
-// Test categories from the schema
-const TEST_CATEGORIES = ["Full Test", "Free Test", "Chapter Test", "Section Test", "Subject Test"]
 
 // Available languages
 const availableLanguages = [
@@ -40,69 +35,26 @@ const availableLanguages = [
   "Punjabi",
 ]
 
-interface TestSeries {
-  _id: string
-  title: string
-  languages: string[]
-}
-
-export default function AddTestPage({ params }: { params: { id: string } }) {
+export default function CreateLiveTestPage() {
   const router = useRouter()
-  const { id } = use(params);
   const { toast } = useToast()
+
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [testSeries, setTestSeries] = useState<TestSeries | null>(null)
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(["English"])
   const [tags, setTags] = useState<string[]>([])
   const [currentTag, setCurrentTag] = useState("")
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(new Date())
   const [availableTo, setAvailableTo] = useState<Date | undefined>(undefined)
-  const [publishedAt, setPublishedAt] = useState<Date | undefined>(undefined)
 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     duration: 60,
-    testCategory: "",
     isFree: false,
-    isLive:false,
     totalMarks: 100,
     passingMarks: 35,
     published: false,
-    questions: [] as string[],
   })
-
-  // Fetch test series data to get languages and other info
-  useEffect(() => {
-    const fetchTestSeries = async () => {
-      setLoading(true)
-      try {
-        const response = await fetch(`${API_BASE_URL}/testseries/${id}`)
-        if (!response.ok) {
-          throw new Error("Failed to fetch test series")
-        }
-        const data = await response.json()
-        setTestSeries(data)
-
-        // Pre-select languages from the test series
-        if (data.languages && data.languages.length > 0) {
-          setSelectedLanguages(data.languages)
-        }
-      } catch (error) {
-        console.error("Error fetching test series:", error)
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to load test series data",
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchTestSeries()
-  }, [id, toast])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -133,7 +85,6 @@ export default function AddTestPage({ params }: { params: { id: string } }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const token = localStorage.getItem('authToken');
 
     if (selectedLanguages.length === 0) {
       toast({
@@ -144,109 +95,70 @@ export default function AddTestPage({ params }: { params: { id: string } }) {
       return
     }
 
-    if (!formData.testCategory) {
-      toast({
-        variant: "destructive",
-        title: "Test category required",
-        description: "Please select a test category",
-      })
-      return
-    }
-
     setIsSubmitting(true)
 
     try {
-      const testData = {
+      const token = localStorage.getItem('authToken');
+
+      const liveTestData = {
         ...formData,
         languages: selectedLanguages,
-        testSeries: id,
         tags,
         availableFrom: availableFrom?.toISOString(),
         availableTo: availableTo?.toISOString(),
-        publishedAt: formData.published && publishedAt ? publishedAt.toISOString() : undefined,
       }
-     console.log(testData)
-      const response = await fetch(`${API_BASE_URL}/tests`, {
+      console.log(liveTestData)
+      const response = await fetch(`${API_BASE_URL}/live/live-test/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(testData),
+        body: JSON.stringify(liveTestData),
       })
+
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to create test")
+        throw new Error(errorData.message || "Failed to create live test")
       }
 
+      const data = await response.json()
+
       toast({
-        title: "Test created",
-        description: "Test has been created successfully",
+        title: "Live Test created",
+        description: "Live test has been created successfully",
       })
 
-      router.push(`/dashboard/tests/${id}`)
+      router.push(`/dashboard/live-tests/${data.liveTest._id}`)
     } catch (error) {
-      console.error("Error creating test:", error)
+      console.error("Error creating live test:", error)
       toast({
         variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create test. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create live test. Please try again.",
       })
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" asChild>
-            <Link href={`/dashboard/tests/${id}`}>
-              <ArrowLeft className="h-4 w-4" />
-              <span className="sr-only">Back</span>
-            </Link>
-          </Button>
-          <Skeleton className="h-8 w-64" />
-        </div>
-
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-72" />
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
         <Button variant="outline" size="icon" asChild>
-          <Link href={`/dashboard/tests/${id}`}>
+          <Link href="/dashboard/live-tests">
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only">Back</span>
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Add New Test</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Create Live Test</h1>
       </div>
 
       <Card>
         <form onSubmit={handleSubmit}>
           <CardHeader>
-            <CardTitle>Test Information</CardTitle>
-            <CardDescription>Create a new test for {testSeries?.title || "this test series"}.</CardDescription>
+            <CardTitle>Live Test Information</CardTitle>
+            <CardDescription>Create a new live test for your students.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Basic Information */}
@@ -258,33 +170,11 @@ export default function AddTestPage({ params }: { params: { id: string } }) {
                 <Input
                   id="title"
                   name="title"
-                  placeholder="Enter test title"
+                  placeholder="Enter live test title"
                   required
                   value={formData.title}
                   onChange={handleChange}
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="testCategory">
-                  Test Category <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  required
-                  value={formData.testCategory}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, testCategory: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TEST_CATEGORIES.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="space-y-2">
@@ -301,29 +191,6 @@ export default function AddTestPage({ params }: { params: { id: string } }) {
                   value={formData.duration}
                   onChange={handleChange}
                 />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="isFree">Free Test</Label>
-                  <Switch
-                    id="isFree"
-                    checked={formData.isFree}
-                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isFree: checked }))}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">Toggle to make this test available for free</p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="Live">Live</Label>
-                  <Switch
-                    id="isLive"
-                    checked={formData.isLive}
-                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isLive: checked }))}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">Toggle to make this test  Live</p>
               </div>
 
               <div className="space-y-2">
@@ -365,11 +232,24 @@ export default function AddTestPage({ params }: { params: { id: string } }) {
               <Textarea
                 id="description"
                 name="description"
-                placeholder="Enter test description"
+                placeholder="Enter live test description"
                 className="min-h-[100px]"
                 value={formData.description}
                 onChange={handleChange}
               />
+            </div>
+
+            {/* Free Test Toggle */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="isFree">Free Test</Label>
+                <Switch
+                  id="isFree"
+                  checked={formData.isFree}
+                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isFree: checked }))}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Toggle to make this test available for free</p>
             </div>
 
             {/* Languages */}
@@ -438,17 +318,11 @@ export default function AddTestPage({ params }: { params: { id: string } }) {
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <Calendar className="mr-2 h-4 w-4" />
                       {availableFrom ? format(availableFrom, "PPP") : "Select date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <CalendarComponent
-                      mode="single"
-                      selected={availableFrom}
-                      onSelect={setAvailableFrom}
-                      initialFocus
-                    />
+                    <Calendar mode="single" selected={availableFrom} onSelect={setAvailableFrom} initialFocus />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -458,12 +332,11 @@ export default function AddTestPage({ params }: { params: { id: string } }) {
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <Calendar className="mr-2 h-4 w-4" />
                       {availableTo ? format(availableTo, "PPP") : "Select date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <CalendarComponent
+                    <Calendar
                       mode="single"
                       selected={availableTo}
                       onSelect={setAvailableTo}
@@ -484,39 +357,17 @@ export default function AddTestPage({ params }: { params: { id: string } }) {
                 </div>
                 <Switch
                   checked={formData.published}
-                  onCheckedChange={(checked) => {
-                    setFormData((prev) => ({ ...prev, published: checked }))
-                    if (checked && !publishedAt) {
-                      setPublishedAt(new Date())
-                    }
-                  }}
+                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, published: checked }))}
                 />
               </div>
-
-              {formData.published && (
-                <div className="space-y-2">
-                  <Label>Publish Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        <Clock className="mr-2 h-4 w-4" />
-                        {publishedAt ? format(publishedAt, "PPP") : "Select date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <CalendarComponent mode="single" selected={publishedAt} onSelect={setPublishedAt} initialFocus />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
             </div>
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
             <Button variant="outline" type="button" asChild>
-              <Link href={`/dashboard/tests/${id}`}>Cancel</Link>
+              <Link href="/dashboard/live-tests">Cancel</Link>
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Test"}
+              {isSubmitting ? "Creating..." : "Create Live Test"}
             </Button>
           </CardFooter>
         </form>

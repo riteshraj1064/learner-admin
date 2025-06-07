@@ -14,12 +14,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 
 // API base URL
-const API_BASE_URL = "http://172.20.10.3:5000/api"
+const API_BASE_URL = "http://13.235.79.13:5000/api"
 
-export default function ImportQuestionsPage({ params }: { params: { id: string; testId: string } }) {
+export default function ImportQuestionsPage({ params }: { params: { id: string; id: string } }) {
   const router = useRouter()
   const { toast } = useToast()
-  const { id, testId } = use(params)
+  const { id } = use(params)
+  console.log(id)
   const token = localStorage.getItem('authToken')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -95,7 +96,7 @@ export default function ImportQuestionsPage({ params }: { params: { id: string; 
       }, 300)
 
       // Send the file to the API
-      const response = await fetch(`${API_BASE_URL}/questions/import/${testId}`, {
+      const response = await fetch(`${API_BASE_URL}/questions/import/${id}`, {
         method: "POST",
         body: formData,
         headers: {
@@ -120,7 +121,7 @@ export default function ImportQuestionsPage({ params }: { params: { id: string; 
 
       // Redirect to the test details page
       setTimeout(() => {
-        router.push(`/dashboard/tests/${id}/test/${testId}`)
+        router.push(`/dashboard/tests/${id}/test/${id}`)
       }, 1500)
     } catch (error) {
       console.error("Error importing questions:", error)
@@ -156,7 +157,7 @@ export default function ImportQuestionsPage({ params }: { params: { id: string; 
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
         <Button variant="outline" size="icon" asChild>
-          <Link href={`/dashboard/tests/${id}/test/${testId}`}>
+          <Link href={`/dashboard/tests/${id}/test/${id}`}>
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only">Back</span>
           </Link>
@@ -260,7 +261,7 @@ export default function ImportQuestionsPage({ params }: { params: { id: string; 
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
           <Button variant="outline" asChild>
-            <Link href={`/dashboard/tests/${id}/test/${testId}`}>Cancel</Link>
+            <Link href={`/dashboard/tests/${id}/test/${id}`}>Cancel</Link>
           </Button>
           <Button onClick={handleUpload} disabled={!file || isUploading}>
             {isUploading ? "Importing..." : "Import Questions"}
